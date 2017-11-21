@@ -1,0 +1,261 @@
+---
+title: "Assignment3"
+author: "Manying"
+date: "19/11/2017"
+output: html_document
+---
+
+```{r}
+source("functions.R")
+```
+
+## Exercise 1
+
+```{r}
+`%>%` <- magrittr::`%>%`
+```
+
+### Task A
+
+```{r}
+d <- stressshift::stress_shift_unamb
+print(d)
+stress_shift_3dict <- dplyr::filter(d,Dict=="W1802"|Dict=="J1917"|Dict=="C1687")
+print(stress_shift_3dict)
+print(nrow(stress_shift_3dict))
+```
+
+### Task B
+
+```{r}
+stress_shift_3dict_using_pipe <- d %>% dplyr::filter(Dict=="W1802"|Dict=="J1917"|Dict=="C1687") %>% print
+identical(stress_shift_3dict,stress_shift_3dict_using_pipe)
+```
+
+### Task C
+
+```{r}
+stress_shift_3dict_nouns <- dplyr::filter(stress_shift_3dict,Category=="Noun")
+stress_shift_3dict_verbs <- dplyr::filter(stress_shift_3dict,Category=="Verb")
+stress_shift_3dict_using_bind <- dplyr::bind_rows(stress_shift_3dict_nouns,stress_shift_3dict_verbs)
+stress_shift_3dict_using_bind_reversed <- dplyr::bind_rows(stress_shift_3dict_verbs,stress_shift_3dict_nouns)
+print(stress_shift_3dict_using_bind)
+print(stress_shift_3dict_using_bind_reversed)
+identical(stress_shift_3dict,stress_shift_3dict_using_bind)
+identical(stress_shift_3dict,stress_shift_3dict_using_bind_reversed)
+```
+
+The identical one is identical to the original data even in term of the data order and the other not, so it's not identical. I think this maybe influences when I have permuted data, but I have some doubt that if I permute it for thousand times, what it will give me.
+
+### Task D
+
+```{r}
+d_nouns <- dplyr::filter(d,Category=="Noun")
+stress_shift_nouns <- dplyr::select(d_nouns,Word,Dict,Syllable)
+stress_shift_nouns_renamed <- dplyr::rename(stress_shift_nouns,Syllable_Noun=Syllable)
+
+# way 2, imitation of the Task B
+stress_shift_nouns_renamed_try <- d %>% dplyr::filter(Category=="Noun") %>%
+            dplyr::select(Word,Dict,Syllable) %>%
+            dplyr::rename(Syllable_Noun=Syllable)
+            
+print(stress_shift_nouns_renamed)
+# print(stress_shift_nouns_renamed_try)
+identical(stress_shift_nouns_renamed_try,stress_shift_nouns_renamed)
+
+stress_shift_verbs_renamed <- d %>% dplyr::filter(Category=="Verb") %>%
+                            dplyr::select(Word,Dict,Syllable) %>%
+                            dplyr::rename(Syllable_Verb=Syllable)
+
+stress_shift_wide <- dplyr::inner_join(stress_shift_nouns_renamed,stress_shift_verbs_renamed)
+print(stress_shift_wide)
+```
+
+The `stress_shift_wide` looks at all the words from all the dictionaries and compare the syllable strengthen when they are nouns and verbs. Some words are only Noun and some words are only Verb, so if we look at the words who have two possible syllable strengthen, then there must be some loss.
+
+### Task E
+
+```{r}
+ggplot2::ggplot(stressshift::stress_shift_unamb,
+                ggplot2::aes(x=Category, fill=Syllable)) +
+  ggplot2::geom_bar(position="dodge", colour="black") + 
+  ggplot2::scale_fill_brewer(palette="Set3")
+```
+
+### Task F
+
+```{r}
+stress_shift_byword <- 
+  stress_shift_wide %>% 
+  dplyr::group_by(Word) %>%
+  dplyr::summarise(
+    Noun_Percent_Syll_1=length(Syllable_Noun[Syllable_Noun=="Syllable 1"])/n(),
+    Verb_Percent_Syll_1=length(Syllable_Verb[Syllable_Verb=="Syllable 1"])/n())
+
+print(stress_shift_byword)
+print(nrow(stress_shift_byword))
+```
+
+### Task G
+
+```{r}
+p <- ggplot2::ggplot(stress_shift_byword,ggplot2::aes_string(x="Noun_Percent_Syll_1",y="Verb_Percent_Syll_1")) +
+  ggplot2::geom_point(mapping=NULL)
+print(p)
+```
+
+### Task H
+
+```{r}
+stress_shift_byword_all <- 
+  dplyr::group_by(stressshift::stress_shift_unamb,Word) %>%
+  dplyr::summarise(
+    Noun_Percent_Syll_1 = length(Syllable[Syllable=="Syllable 1"&Category=="Noun"])/length(Syllable[Category=="Noun"]),
+    Verb_Percent_Syll_1 = length(Syllable[Syllable=="Syllable 1"&Category=="Verb"])/length(Syllable[Category=="Verb"]))
+print(stress_shift_byword_all)
+```
+
+```{r}
+dpfilter <- dplyr::filter
+ggplot <- ggplot2::ggplot
+```
+
+## Exercise 2
+
+### Task B
+
+```{r}
+print(difference_in_proportion(stressshift::stress_shift_unamb,"Syllable", "Category", "Noun","Verb","Syllable 1")) # TRÈS IMPORTANT !!! CATEGORY should with "", otherwise OBJET INTROUVABLE
+```
+
+### Task B
+
+```{r}
+if(!exists(".Random.seed")) set.seed(NULL)
+previous_seed <- .Random.seed
+set.seed(1)
+ptest_stress <- permutation_twogroups(stressshift::stress_shift_unamb,
+                      "Syllable", "Category", "Noun", "Verb",
+                      difference_in_proportion,
+                      n_samples=99,
+                      "Syllable 1")
+set.seed(previous_seed)
+permutation_pvalue_right(ptest_stress)
+ptest_stress
+```
+
+```{r}
+ptest_stress_permuted <- tibble::as_tibble(ptest_stress["permuted"])
+ptest_stress_observe <- as.numeric(ptest_stress["observed"])
+p <- ggplot(ptest_stress_permuted,
+            ggplot2::aes_string(x="permuted",y="..count.."))+ # define the x and y
+  ggplot2::geom_histogram(colour="skyblue",fill="skyblue",binwidth = 0.005)+ # tell R clearly that the object is a histogram
+   ggplot2::geom_vline(ggplot2::aes(xintercept=ptest_stress_observe), lwd=0.5, color="skyblue")
+print(p)
+```
+
+## Exercise 3
+
+### Task A
+
+```{r}
+n_n <- sum(stressshift::stress_shift_unamb$Category=="Noun")
+n_v <- sum(stressshift::stress_shift_unamb$Category=="Verb")
+n_sy_n <- sum(stressshift::stress_shift_unamb$Category=="Noun" & stressshift::stress_shift_unamb$Syllable=="Syllable 1")
+n_sy_v <- sum(stressshift::stress_shift_unamb$Category=="Verb" & stressshift::stress_shift_unamb$Syllable=="Syllable 1")
+prop_n <- n_sy_n/n_n
+prop_v <- n_sy_v/n_v
+print(n_n)
+print(n_v)
+print(prop_n)
+print(prop_v)
+```
+
+```{r}
+simulate_n <- rbinom(1000, n_n, prop_n)
+simulate_v <- rbinom(1000, n_v, prop_v)
+
+Replication <- paste0("R", sprintf("%04d", 1:1000))
+Noun_N_Syll_1 <- c(simulate_n)
+Verb_N_Syll_1 <- c(simulate_v)
+Noun_Percent_Syll_1 <- stress_shift_replications$Noun_N_Syll_1/n_n
+Verb_Percent_Syll_1 <- stress_shift_replications$Verb_N_Syll_1/n_v
+Difference_in_Proportion <- stress_shift_replications$Noun_Percent_Syll_1-stress_shift_replications$Verb_Percent_Syll_1
+
+stress_shift_replications <- data.frame(Replication,Noun_N_Syll_1,Verb_N_Syll_1,Noun_Percent_Syll_1,Verb_Percent_Syll_1,Difference_in_Proportion)
+
+print(stress_shift_replications)
+```
+
+```{r}
+
+ptest_stress_observe <- as.numeric(ptest_stress["observed"])
+p_rep <- ggplot(stress_shift_replications,
+            ggplot2::aes_string(x="Difference_in_Proportion",y="..count.."))+ # define the x and y
+  ggplot2::geom_histogram(colour="skyblue",fill="skyblue",binwidth = 0.005)+ # tell R clearly that the object is a histogram
+   ggplot2::geom_vline(ggplot2::aes(xintercept=ptest_stress_observe), lwd=0.5, color="skyblue")+
+  ggplot2::xlim(c(-0.1, 0.8))
+print(p_rep)
+```
+
+```{r}
+ptest_stress_permuted <- tibble::as_tibble(ptest_stress["permuted"])
+ptest_stress_observe <- as.numeric(ptest_stress["observed"])
+p <- ggplot(ptest_stress_permuted,
+            ggplot2::aes_string(x="permuted",y="..count.."))+ # define the x and y
+  ggplot2::geom_histogram(colour="skyblue",fill="skyblue",binwidth = 0.005)+ # tell R clearly that the object is a histogram
+   ggplot2::geom_vline(ggplot2::aes(xintercept=ptest_stress_observe), lwd=0.5, color="skyblue")+
+  ggplot2::xlim(c(-0.1, 0.8))
+print(p)
+```
+
+Because the new "stress_shift_replications" one is simulated by obeying the exact probability of "proportion of Syllable 1 in Nouns" and "in Verbs", however the permuted one is permuted by randomly disturbing all the data. So there's necessarily a big difference between them.
+
+```{r cache=TRUE}
+stress_shift_replications <- stress_shift_replications %>%
+  dplyr::mutate(
+    Permutation_Pvalue = v_pdp_pvalue_right(Noun_N_Syll_1, Verb_N_Syll_1,
+                                            n_n,
+                                            n_v,
+                                            n_samples=99))
+print(stress_shift_replications)
+```
+
+- with one tenth the number of observations in each group (651 noun and 673 verb observations)
+
+```{r}
+simulate_n <- c(rbinom(100, n_n, prop_n))
+simulate_v <- c(rbinom(100, n_v, prop_v))
+stress_shift_replications_onetenth <- stress_shift_replications %>%
+  dplyr::mutate(
+    Permutation_Pvalue = v_pdp_pvalue_right(simulate_n, simulate_v,
+                                            651,
+                                            673,
+                                            n_samples=9))
+print(stress_shift_replications_onetenth)
+```
+
+- with the same overall number of observations, but with one tenth as many observations for verbs as for nouns (12034 noun and 1204 verb observations)
+
+```{r}
+stress_shift_replications_tennouns <- stress_shift_replications %>%
+  dplyr::mutate(
+    Permutation_Pvalue = v_pdp_pvalue_right(Noun_N_Syll_1, Verb_N_Syll_1,
+                                            12034,
+                                            1204,
+                                            n_samples=99))
+print(stress_shift_replications_tennouns)
+```
+
+- with a total of only 33 observations (16 noun observations and 17 verb observations)
+
+```{r}
+stress_shift_replications_tennouns <- stress_shift_replications %>%
+  dplyr::mutate(
+    Permutation_Pvalue = v_pdp_pvalue_right(Noun_N_Syll_1, Verb_N_Syll_1,
+                                            12034,
+                                            1204,
+                                            n_samples=99))
+print(stress_shift_replications_tennouns)
+```
+
