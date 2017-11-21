@@ -178,9 +178,9 @@ simulate_v <- rbinom(1000, n_v, prop_v)
 Replication <- paste0("R", sprintf("%04d", 1:1000))
 Noun_N_Syll_1 <- c(simulate_n)
 Verb_N_Syll_1 <- c(simulate_v)
-Noun_Percent_Syll_1 <- stress_shift_replications$Noun_N_Syll_1/n_n
-Verb_Percent_Syll_1 <- stress_shift_replications$Verb_N_Syll_1/n_v
-Difference_in_Proportion <- stress_shift_replications$Noun_Percent_Syll_1-stress_shift_replications$Verb_Percent_Syll_1
+Noun_Percent_Syll_1 <- Noun_N_Syll_1/n_n
+Verb_Percent_Syll_1 <- Verb_N_Syll_1/n_v
+Difference_in_Proportion <- Noun_Percent_Syll_1-Verb_Percent_Syll_1
 
 stress_shift_replications <- data.frame(Replication,Noun_N_Syll_1,Verb_N_Syll_1,Noun_Percent_Syll_1,Verb_Percent_Syll_1,Difference_in_Proportion)
 
@@ -250,11 +250,11 @@ print(stress_shift_replications_onetenth)
 - with the same overall number of observations, but with one tenth as many observations for verbs as for nouns (12034 noun and 1204 verb observations)
 
 ```{r}
-NounSyll1 <- c(rbinom(1000, 12034, prop_n))
-VerbSyll1 <- c(rbinom(1000, 1204, prop_v))
+NounSyll_1 <- c(rbinom(1000, 12034, prop_n))
+VerbSyll_1 <- c(rbinom(1000, 1204, prop_v))
 stress_shift_replications_tennouns <- stress_shift_replications %>%
   dplyr::mutate(
-    Permutation_Pvalue = v_pdp_pvalue_right(Noun_N_Syll_1, Verb_N_Syll_1,
+    Permutation_Pvalue = v_pdp_pvalue_right(NounSyll_1, VerbSyll_1,
                                             12034,
                                             1204,
                                             n_samples=99))
@@ -264,39 +264,39 @@ print(stress_shift_replications_tennouns)
 - with a total of only 33 observations (16 noun observations and 17 verb observations)
 
 ```{r}
-NounSyll1 <- c(rbinom(1000, 16, prop_n))
-VerbSyll1 <- c(rbinom(1000, 17, prop_v))
+NounSyll33 <- c(rbinom(1000, 16, prop_n))
+VerbSyll33 <- c(rbinom(1000, 17, prop_v))
 stress_shift_replications_16 <- stress_shift_replications %>%
   dplyr::mutate(
-    Permutation_Pvalue = v_pdp_pvalue_right(Noun_N_Syll_1, Verb_N_Syll_1,
+    Permutation_Pvalue = v_pdp_pvalue_right(NounSyll33, VerbSyll33,
                                             16,
                                             17,
-                                            n_samples=99))
+                                            n_samples=9))
 print(stress_shift_replications_16)
 ```
 
 - with a total of 33 observations, but with one tenth as many observations for verbs as for nouns (30 noun observations and 3 verb observations)
 
 ```{r}
-NounSyll1 <- c(rbinom(1000, 33, prop_n))
-VerbSyll1 <- c(rbinom(1000, 3, prop_v))
-stress_shift_replications_33 <- stress_shift_replications %>%
+NounSyll30 <- c(rbinom(1000, 33, prop_n))
+VerbSyll30 <- c(rbinom(1000, 3, prop_v))
+stress_shift_replications_30 <- stress_shift_replications %>%
   dplyr::mutate(
-    Permutation_Pvalue = v_pdp_pvalue_right(Noun_N_Syll_1, Verb_N_Syll_1,
+    Permutation_Pvalue = v_pdp_pvalue_right(NounSyll30, VerbSyll30,
                                             33,
                                             3,
                                             n_samples=99))
-print(stress_shift_replications_33)
+print(stress_shift_replications_30)
 ```
 
 - with one tenth the number of observations, and a probability of "Syllable 1" of 0.52 for nouns and 0.48 for verbs
 
 ```{r}
-NounSyll1 <- c(rbinom(1000, 651, 0.52))
-VerbSyll1 <- c(rbinom(1000, 673, 0.48))
+NounSyllp <- c(rbinom(1000, 651, 0.52))
+VerbSyllp <- c(rbinom(1000, 673, 0.48))
 stress_shift_replications_onetenth <- stress_shift_replications %>%
   dplyr::mutate(
-    Permutation_Pvalue = v_pdp_pvalue_right(NounSyll1, VerbSyll1,
+    Permutation_Pvalue = v_pdp_pvalue_right(NounSyllp, VerbSyllp,
                                             651,
                                             673,
                                             n_samples=9))
@@ -306,15 +306,15 @@ print(stress_shift_replications_onetenth)
 - with the same original numbers of observations, and new underlying distributions in the two groups: a probability of "Syllable 1" of 0.52 for nouns and 0.48 for verbs
 
 ```{r}
-NounSyll1 <- c(rbinom(1000, n_n, 0.52))
-VerbSyll1 <- c(rbinom(1000, n_v, 0.48))
-stress_shift_replications_onetenth <- stress_shift_replications %>%
+NounSyllps <- c(rbinom(1000, n_n, 0.52))
+VerbSyllps <- c(rbinom(1000, n_v, 0.48))
+stress_shift_replications_ps <- stress_shift_replications %>%
   dplyr::mutate(
-    Permutation_Pvalue = v_pdp_pvalue_right(NounSyll1, VerbSyll1,
+    Permutation_Pvalue = v_pdp_pvalue_right(NounSyllps, VerbSyllps,
                                             n_n,
                                             n_v,
                                             n_samples=9))
-print(stress_shift_replications_onetenth)
+print(stress_shift_replications_ps)
 ```
 
 ### Exercise 4
